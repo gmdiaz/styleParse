@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+# Author: Giovanna Diaz
+
+import re
+import sys
+
+class Program:
+#num classes
+    def __init__(self,name):
+        self.name = name
+        self.Lclasses = []
+        self.Lfuncs = []
+        self.hasMain = False
+
+    def getFunctions(self):
+        return self.Lfuncs
+    
+    def addFunction(self,newFunc):
+        self.Lfuncs.append(newFunc)
+
+    def addClass(self,newClass):
+        self.Lclasses.append(newClass)
+
+    def setMainTrue(self):
+        self.hasMain = True
+
+    def __str__(self):
+        stats = self.name+'\n'
+        stats += "functions:\t"+str(len(self.Lfuncs))+"\n"
+        stats += "classes:\t"+str(len(self.Lclasses))+"\n"
+        for f in self.Lfuncs:
+            print(f)
+        return stats
+
+class Class:
+    def __init__(self,name):
+        self.name = name
+        self.Lmethods = []
+        self.numInitParam = 0
+
+    def addMethod(self,newMethod):
+        self.Lmethods.append(newMethod)
+
+    def __str__(self):
+        stats = "Class "+self.name+":\n"
+        stats+= "\tMethods: "+str(len(self.Lmethods))
+        stats+= "\tInit Param: "+str(self.numInit)
+        return stats
+
+class Function:
+    def __init__(self,name):
+        self.name = name
+        self.docStrings = False
+        self.inMain = False
+        self.numParam = 0
+
+    def getName(self):
+        return self.name
+    def setDocs(self,val):
+        self.docStrings = val
+    def setMain(self,val):
+        self.inMain = val
+    def setNumParams(self,num):
+        self.numParam = num
+    def hasDocs(self):
+        return self.docStrings
+    def isInMain(self):
+        return self.inMain
+
+    def __str__(self):
+        stats = "Function "+str(self.name)+":\n"
+        stats += "\tDocs?: "+str(self.docStrings)
+        return stats
+
+def readFancyFile(filename):
+    f = open(filename,'r')
+    lines = [line.strip() for line in f]
+    f.close()
+    #return " ".join(lines)
+    return lines
+
+def readFile(filename):
+    f = open(filename,'r')
+    lines = f.readlines()
+    f.close()
+    return lines
+
+def findMatches(regex,flag,string):
+    """ Given a regex, and a string, returns
+    the 'pattern.finall(string)
+
+    keyword arguments:
+    regex -- string regex
+    string -- any given string
+    """
+    if flag:
+        pattern = re.compile(regex,flag)
+    else:
+        pattern = re.compile(regex)
+    return pattern.findall(string)
+
+def checkComments(program):
+    print(str(program.count('#')),"line(s) of comments")
+
+def main():
+    Lprograms = []
+    newProg = Program("testName")
+    
+    # Read file
+    program = readFile("test.py")
+    print(program)
+
+    numComments = 0
+    # ~num of tokens - comments and docstrings
+
+    #Analyze Functions & Classes
+    for i in range(len(program)-1):
+        line = program[i]
+        nextLine = program[i+1]
+
+        if "#" in line:
+            numComments+=1
+            
+        if "def" in line and "main" not in line:
+            # Sample return: [('concordance', 'words,test,test')]    
+            fDef = findMatches("def (.*)\((.*)\):",None,program[i])[0]
+            newF = Function(fDef[0])
+
+            if len(fDef)>1:
+                newF.setNumParams(len(fDef[1].split(",")))
+            
+            if "'''" in nextLine:
+                newF.setDocs(True)
+            
+            newProg.addFunction(newF)
+            
+        if "class" in line:
+            newClass = Class("className")
+            # num methods
+            # if in main()
+
+        if "main()" in line:
+            newProg.setMainTrue()
+            break
+
+    #Analyze Main
+    for j in range(i, len(program)-1):
+        if '#' in program[j]:
+            numComments+=1
+
+    print(newProg)
+
+if __name__ == "__main__":
+    main()
