@@ -6,6 +6,7 @@ class test:
         self.test = "this is a test"
 
     def testMethod(self):
+        ''' Test docstring in my class! '''
         print("lol hey guys")
         print("this is fun")
         print("test test test yes yes yes ")

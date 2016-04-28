@@ -11,6 +11,9 @@ class Program:
         self.Lclasses = []
         self.Lfuncs = []
         self.hasMain = False
+        self.numComments = 0
+        self.code = []
+        self.lengthCode = 0
 
     def getFunctions(self):
         return self.Lfuncs
@@ -20,14 +23,36 @@ class Program:
 
     def addClass(self,newClass):
         self.Lclasses.append(newClass)
+    
+    def addLine(self,line):
+        self.code.append(copy(line.strip()))
 
     def setMainTrue(self):
         self.hasMain = True
+    
+    def _getNumComments(self):
+        self.numComments = len(list(filter(lambda l: "#" in l,self.code)))
+
+    def _cleanOutComments(self):
+        lines = list(filter(lambda l: not l.startswith("#"),self.code))
+        nLines = []
+        for line in lines:
+            if "#" in line:
+                line = line.split("#")[0]
+            nLines.append(line)
+        return nLines
 
     def __str__(self):
+        self._getNumComments()
+        cleanCode = self._cleanOutComments()
+        self.lengthCode = len(" ".join(cleanCode).split())
+
         stats = self.name+'\n'
-        stats += "functions:\t"+str(len(self.Lfuncs))+"\n"
-        stats += "classes:\t"+str(len(self.Lclasses))+"\n"
+        stats += "#functions:\t"+str(len(self.Lfuncs))+"\n"
+        stats += "#classes:\t"+str(len(self.Lclasses))+"\n"
+        stats += "has main?:\t"+str(self.hasMain)+"\n"
+        stats += "#comments:\t"+str(self.numComments)+"\n"
+        stats += "Code length:\t"+str(self.lengthCode)+"\n"
         stats += "---------------------------------\n"
 
         for c in self.Lclasses:
@@ -78,6 +103,8 @@ class Function:
         return self.numParam
     def getName(self):
         return self.name
+    def getCode(self):
+        return self.code
     def setDocsTrue(self):
         self.docStrings = True
     def setMainTrue(self):
@@ -128,16 +155,19 @@ def isFunction(line):
         return True
     return False
 
+
+
+
 def main():
     Lprograms = []
     nProgram = Program("testName")
-    
-    numComments = 0
 
     #Analyze Functions & Classes
+    nFunction = None
     with open("test.py") as infile:
         for line in infile:
             line=line.rstrip()
+            nProgram.addLine(line)
 
             # Get data on classes
             if line.startswith("class"):
@@ -148,6 +178,7 @@ def main():
                 nMethod = None
                 while True:
                     line = next(infile).rstrip()
+                    nProgram.addLine(line)
 
                     # Check for method
                     if isMethod(line):
@@ -156,6 +187,9 @@ def main():
                         nClass.addMethod(nMethod)
                         nMethod.addLine(line)
                         
+                        if "'''" in next(infile):
+                            nMethod.setDocsTrue()
+
                     # If a regular def -> your class is over
                     elif isFunction(line):
                         break
@@ -164,15 +198,32 @@ def main():
                     elif nMethod:
                         nMethod.addLine(line)
 
+            # Get data on functions
             if isFunction(line):
                 name,numParam = getDefinition(line)
-                nFunc = Function(name,numParam)
-                nProgram.addFunction(nFunc)
+                nFunction = Function(name,numParam)
+                nFunction.addLine(line)
+                nProgram.addFunction(nFunction)
 
                 if "'''" in next(infile):
-                    nFunc.setDocsTrue()
+                    nFunction.setDocsTrue()
+            
+            if nFunction and line.startswith(" "):
+                nFunction.addLine(line)
+
+    # Are functions called in main()?
+    funcs = nProgram.getFunctions()
+    mainCode = None
+    for f in funcs:
+        if f.getName().lower() == "main":
+            nProgram.setMainTrue()
+            mainCode = " ".join(f.getCode())
+    for f in funcs:
+        if f.getName() in mainCode:
+            f.setMainTrue()
 
     print(nProgram)
-    
+
+
 if __name__ == "__main__":
     main()
