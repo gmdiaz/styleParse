@@ -1,6 +1,15 @@
 #Assignment 7: Concordance
 #By Ha Le Phuong
 
+class test:
+    def __init__(self):
+        self.test = "this is a test"
+
+    def testMethod(self):
+        print("lol hey guys")
+        print("this is fun")
+        print("test test test yes yes yes ")
+
 def punctuation(text):
     '''this removes punctuations from text'''
     punc = '.,?!:;-\'"()/'
