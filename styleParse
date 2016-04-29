@@ -10,6 +10,10 @@ import re
 # ------------------------------
 
 class Program:
+    """
+    Constructs a program object and prints out the formatted
+    statistics
+    """
     def __init__(self,name,author):
         self.name = name
         self.author = author
@@ -88,6 +92,9 @@ class Program:
         return stats
 
 class Class:
+    """
+    Constructs a class object and prints out the statistics
+    """
     def __init__(self,name):
         self.name = name
         self.Lmethods = []
@@ -115,6 +122,10 @@ class Class:
         return stats
 
 class Function:
+    """
+    Constructs a funciton object and prints out the statistics
+    Note: This is general! Methods are functions too!
+    """
     def __init__(self,name,numParam):
         self.name = name
         self.docStrings = False
@@ -147,12 +158,8 @@ class Function:
         return stats
 
 def findMatches(regex,flag,string):
-    """ Given a regex, and a string, returns
-    the 'pattern.finall(string)
-
-    keyword arguments:
-    regex -- string regex
-    string -- any given string
+    """ 
+    Given a regex, and a string, returns the 'pattern.finall(string)
     """
     if flag:
         pattern = re.compile(regex,flag)
@@ -161,6 +168,10 @@ def findMatches(regex,flag,string):
     return pattern.findall(string)
 
 def getDefinition(line):
+    """ 
+    Given a line in the code, returns the function
+    name and the parameters (if there are any 
+    """
     defInfo = findMatches("def (.*)\((.*)\):",None,line)[0] 
     name = defInfo[0]
     numParam = 0
@@ -169,16 +180,29 @@ def getDefinition(line):
     return name.strip(), numParam
 
 def isMethod(line):
+    """
+    Returns True or False depending on if the line is a METHOD
+    definition or not - ie. has some form of indentation before
+    the 'def'
+    """
     if line.strip().startswith("def") and line[0]!='d':
         return True
     return False
 
 def isFunction(line):
+    """
+    Returns True or False depending on if the line is a FUNCTION
+    definition or not - ie. line starts with 'def'
+    """
     if line.startswith("def"):
         return True
     return False
 
 def extractName(fname):
+    """
+    Given a file name, this exracts the students first and last name
+    if possible. Returns 'Unknown' if the name cannot be determined
+    """
     pat = re.compile('^[a-zA-z ]+[ _][a-zA-Z\-]+_')
     search = pat.search(fname)
     name = 'Unknown'
@@ -192,12 +216,22 @@ def extractName(fname):
     return name
 
 def writeOut(Lprograms):
+    """
+    Give a list of program objects, this function will write out
+    the statistics on each one to a file
+    """
     f = open("styleOutput.txt","w")
     for program in Lprograms:
         f.write(str(program))
     f.close()
 
 def main():
+    """
+    This program goes through all the files in the folder it is in
+    and analyzes the code for style (classes, methods, functions, etc.)
+    It outputs a file at the end with the formatted data for
+    the program for each student.
+    """
     files = glob.glob('*.py')
     fnumber = 0
     Lprograms = []
