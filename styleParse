@@ -203,7 +203,7 @@ def main():
     Lprograms = []
 
     for fname in files:
-        if fname=="eval.py" or fname=="styleParse.py" or fname=="test.py":
+        if fname=="eval.py" or fname=="styleParse.py":
             continue
         elif fname[-3:] != '.py':
             #skip e.g. .sh files
