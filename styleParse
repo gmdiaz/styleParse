@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 # Author: Giovanna Diaz
 
+# Imports  ---------------------
 import re
 import sys
 from copy import copy
+import glob
+import re
+# ------------------------------
 
 class Program:
-    def __init__(self,name):
+    def __init__(self,name,author):
         self.name = name
+        self.author = author
         self.Lclasses = []
         self.Lfuncs = []
         self.hasMain = False
         self.numComments = 0
         self.code = []
         self.lengthCode = 0
-
-    def getFunctions(self):
-        return self.Lfuncs
+        self.nameInComments = False
     
     def addFunction(self,newFunc):
         self.Lfuncs.append(newFunc)
@@ -42,16 +45,36 @@ class Program:
             nLines.append(line)
         return nLines
 
+    def _checkAuthorInCode(self):
+        nameList = self.author.split()
+        lname = nameList[-1]
+        if lname in "".join(self.code):
+            self.nameInComments = True
+
+    def _checkMainRequirements(self):
+        mFunc = list(filter(lambda m: m.getName() == "main",self.Lfuncs))
+        if len(mFunc)>0:
+            mFunc = mFunc[0]
+            self.hasMain = True
+            mainCode = " ".join(mFunc.getCode())
+            for f in self.Lfuncs:
+                if f.getName() in mainCode:
+                    f.setMainTrue()
+
     def __str__(self):
         self._getNumComments()
+        self._checkAuthorInCode()
+        self._checkMainRequirements()
         cleanCode = self._cleanOutComments()
         self.lengthCode = len(" ".join(cleanCode).split())
 
-        stats = self.name+'\n'
-        stats += "#functions:\t"+str(len(self.Lfuncs))+"\n"
-        stats += "#classes:\t"+str(len(self.Lclasses))+"\n"
-        stats += "has main?:\t"+str(self.hasMain)+"\n"
-        stats += "#comments:\t"+str(self.numComments)+"\n"
+        #stats = self.name+'\n'
+        stats = "Author: "+str(self.author)+"\n"
+        stats += "Put name?:\t"+str(self.nameInComments)+"\n"
+        stats += "has main()?:\t"+str(self.hasMain)+"\n"
+        stats += "# functions:\t"+str(len(self.Lfuncs))+"\n"
+        stats += "# classes:\t"+str(len(self.Lclasses))+"\n"
+        stats += "# comments:\t"+str(self.numComments)+"\n"
         stats += "Code length:\t"+str(self.lengthCode)+"\n"
         stats += "---------------------------------\n"
 
@@ -59,9 +82,9 @@ class Program:
             stats+=str(c)+"\n"
             stats += "---------------------------------\n"
         for f in self.Lfuncs:
-            stats+="Function:"+str(f.getName())+"()"+"\n"
+            stats+="Function: "+str(f.getName())+"() --> "
             stats+=str(f)+"\n"
-
+        stats+="============================================\n\n"
         return stats
 
 class Class:
@@ -87,7 +110,7 @@ class Class:
         stats+= "\tMethods: "+str(len(self.Lmethods))
         stats+= "\tInit Param: "+str(self.numInitParam)+"\n"
         for m in self.Lmethods:
-            stats+="Method: "+str(m.getName())+"\n"
+            stats+="Method: "+str(m.getName())+"() --> "
             stats+=str(m)+"\n"
         return stats
 
@@ -138,12 +161,12 @@ def findMatches(regex,flag,string):
     return pattern.findall(string)
 
 def getDefinition(line):
-    defInfo = findMatches("def (.*)\((.*)\):",None,line)[0]
+    defInfo = findMatches("def (.*)\((.*)\):",None,line)[0] 
     name = defInfo[0]
     numParam = 0
     if len(defInfo)>1:
         numParam = len(defInfo[1].split(","))
-    return name, numParam
+    return name.strip(), numParam
 
 def isMethod(line):
     if line.strip().startswith("def") and line[0]!='d':
@@ -155,75 +178,127 @@ def isFunction(line):
         return True
     return False
 
+def extractName(fname):
+    pat = re.compile('^[a-zA-z ]+[ _][a-zA-Z\-]+_')
+    search = pat.search(fname)
+    name = 'Unknown'
+    if not search:
+        print("ExtractName Error: No match found - returning \'Unknown\'")
+    else:
+        #print("==> Match name: ", search.group())
+        # Drop last char
+        name = search.group()
+        name = name[0:-1]
+    return name
 
-
+def writeOut(Lprograms):
+    f = open("styleOutput.txt","w")
+    for program in Lprograms:
+        f.write(str(program))
+    f.close()
 
 def main():
+    files = glob.glob('*.py')
+    fnumber = 0
     Lprograms = []
-    nProgram = Program("testName")
 
-    #Analyze Functions & Classes
-    nFunction = None
-    with open("test.py") as infile:
-        for line in infile:
-            line=line.rstrip()
-            nProgram.addLine(line)
+    for fname in files:
+        if fname=="eval.py" or fname=="styleParse.py" or fname=="test.py":
+            continue
+        elif fname[-3:] != '.py':
+            #skip e.g. .sh files
+            continue
+        else:
+            fnumber+=1
+            print('File Number = ',fnumber, '\tFile Name = ', fname)
+    
+        # Fix the filename to replace spaces by \space, for shell exec
+        ffname = fname.replace(" ", "\\ ")
+    
+        # Create new program object, add to list
+        nProgram = Program(fname, extractName(fname))
+        Lprograms.append(nProgram)
 
-            # Get data on classes
-            if line.startswith("class"):
-                name = findMatches("class (.*):",None,line)[0]
-                nClass = Class(name)
-                nProgram.addClass(nClass)
+        #Analyze Functions & Classes
+        nFunction = None
+        with open(fname) as infile:
+            for line in infile:
+                line=line.rstrip()
+                nProgram.addLine(line)
+
+               # Get data on classes
+                if line.startswith("class"):
+                    name = findMatches("class (.*):",None,line)[0]
+                    nClass = Class(name)
+                    nProgram.addClass(nClass)
                 
-                nMethod = None
-                while True:
-                    line = next(infile).rstrip()
-                    nProgram.addLine(line)
-
-                    # Check for method
-                    if isMethod(line):
-                        name, numParam = getDefinition(line)
-                        nMethod = Function(name,numParam)
-                        nClass.addMethod(nMethod)
-                        nMethod.addLine(line)
+                    nMethod = None
+                    while True:
+                        line = next(infile).rstrip()
+                        nProgram.addLine(line)
                         
-                        if "'''" in next(infile):
-                            nMethod.setDocsTrue()
+                        # Check for method
+                        if isMethod(line):
 
-                    # If a regular def -> your class is over
-                    elif isFunction(line):
-                        break
+                            # Check for multiline method def
+                            multiLineDef = ""
+                            while ")" not in line:
+                                multiLineDef += line
+                                line = next(infile).strip()
+                            
+                            # if there was a multiLineDef
+                            if len(multiLineDef)>0:
+                                multiLineDef += line.strip()
+                                print("MLD",multiLineDef)
+                                name,numParam = getDefinition(multiLineDef)
+                            else:
+                                name,numParam = getDefinition(line)
 
-                    # Save code in func object
-                    elif nMethod:
-                        nMethod.addLine(line)
+                            # Make the method either way
+                            nMethod = Function(name,numParam)
+                            nClass.addMethod(nMethod)
+                            nMethod.addLine(line)
+                        
+                            if "'''" in next(infile):
+                                nMethod.setDocsTrue()
 
-            # Get data on functions
-            if isFunction(line):
-                name,numParam = getDefinition(line)
-                nFunction = Function(name,numParam)
-                nFunction.addLine(line)
-                nProgram.addFunction(nFunction)
+                        # If a regular def -> your class is over
+                        elif len(line) > 0 and line[0] not in [' ', '\t']:
+                            break
 
-                if "'''" in next(infile):
-                    nFunction.setDocsTrue()
-            
-            if nFunction and line.startswith(" "):
-                nFunction.addLine(line)
+                        # Save code in func object
+                        elif nMethod:
+                            nMethod.addLine(line)
 
-    # Are functions called in main()?
-    funcs = nProgram.getFunctions()
-    mainCode = None
-    for f in funcs:
-        if f.getName().lower() == "main":
-            nProgram.setMainTrue()
-            mainCode = " ".join(f.getCode())
-    for f in funcs:
-        if f.getName() in mainCode:
-            f.setMainTrue()
+                # Get data on functions
+                if isFunction(line):
 
-    print(nProgram)
+                    # Check for multipline line def
+                    multiLineDef = ""
+                    while ")" not in line:
+                        multiLineDef += line
+                        line = next(infile).strip()
+ 
+                    # if there was a multiLineDef
+                    if len(multiLineDef)>0:
+                        print("MLD",multiLineDef)
+                        name,numParam = getDefinition(multiLineDef)
+                    else:
+                        name,numParam = getDefinition(line)
+    
+                    # make the function either way
+                    nFunction = Function(name,numParam)
+                    nFunction.addLine(line)
+                    nProgram.addFunction(nFunction)
 
+                    if "'''" in next(infile):
+                        nFunction.setDocsTrue()
+
+                if nFunction and line.startswith(" "):
+                    nFunction.addLine(line)
+
+        #print(nProgram)
+        writeOut(Lprograms)
 
 if __name__ == "__main__":
     main()
