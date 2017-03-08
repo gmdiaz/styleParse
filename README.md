@@ -1,8 +1,8 @@
 # styleParse
 Parses for style on CSC 111 Programs
 
-```
 # Example output
+```
 Author: Firstname Lastname
 Put name?:	True
 has main()?:	True
