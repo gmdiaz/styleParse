@@ -1,6 +1,7 @@
 # styleParse
 Parses for style on CSC 111 Programs
 
+```
 # Example output
 Author: Firstname Lastname
 Put name?:	True
@@ -44,3 +45,4 @@ Function: getRandomSpeeds() --> 	Docs?: True	Main?: True
 Function: getRandomColors() --> 	Docs?: True	Main?: True
 Function: runAnimation() --> 	Docs?: True	Main?: True
 Function: main() --> 	Docs?: False	Main?: True
+```
